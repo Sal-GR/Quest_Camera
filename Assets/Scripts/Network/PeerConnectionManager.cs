@@ -4,14 +4,6 @@ using System.Collections.Generic;
 using Unity.WebRTC;
 using UnityEngine;
 
-/// <summary>
-/// Owns the RTCPeerConnection lifecycle:
-/// - Creates and configures the peer connection from ICE config
-/// - Handles outbound ICE candidates (via SignalingClient)
-/// - Creates and sends the SDP offer
-/// - Applies the remote SDP answer
-/// - Applies inbound ICE candidates
-/// </summary>
 public class PeerConnectionManager : MonoBehaviour
 {
   // Fired when a local ICE candidate is ready to be sent via signaling
@@ -19,15 +11,12 @@ public class PeerConnectionManager : MonoBehaviour
 
   // Fired when the offer SDP is ready to be sent via signaling
   public event Action<string> OnOfferReady;
+  public event Action OnConnectionLost;
 
   private RTCPeerConnection _peerConnection;
   private VideoStreamTrack _videoTrack;
 
   public bool IsReady => _peerConnection != null;
-
-  // -------------------------------------------------------------------------
-  // Setup
-  // -------------------------------------------------------------------------
 
   public void SetupPeerConnection(IceConfigResponse iceConfig)
   {
@@ -65,13 +54,6 @@ public class PeerConnectionManager : MonoBehaviour
       Debug.Log("PeerConnectionManager: Peer connection ready");
   }
 
-  // Fired when the connection drops so WebRTCSender can notify the signaling server
-  public event Action OnConnectionLost;
-
-  // -------------------------------------------------------------------------
-  // Track
-  // -------------------------------------------------------------------------
-
   public void AddVideoTrack(VideoStreamTrack track)
   {
       if (_peerConnection == null)
@@ -83,10 +65,6 @@ public class PeerConnectionManager : MonoBehaviour
       _peerConnection.AddTrack(_videoTrack);
       Debug.Log("PeerConnectionManager: Video track added");
   }
-
-  // -------------------------------------------------------------------------
-  // Offer / Answer
-  // -------------------------------------------------------------------------
 
   public void SendOffer()
   {
@@ -134,49 +112,11 @@ public class PeerConnectionManager : MonoBehaviour
       Debug.Log("PeerConnectionManager: Remote answer set, WebRTC connected");
   }
 
-  // -------------------------------------------------------------------------
-  // Inbound ICE candidates
-  // -------------------------------------------------------------------------
-
   public void HandleIceCandidate(Dictionary<string, object> data)
   {
-      try
-      {
-          if (!data.ContainsKey("candidate")) return;
-
-          var candidateRaw = data["candidate"];
-          if (candidateRaw == null) return;
-
-          var candidateObj = Newtonsoft.Json.JsonConvert
-              .DeserializeObject<Dictionary<string, object>>(candidateRaw.ToString());
-
-          if (candidateObj == null) return;
-
-          var candidateStr = candidateObj.ContainsKey("candidate") ? candidateObj["candidate"]?.ToString() : "";
-          if (string.IsNullOrEmpty(candidateStr)) return;
-
-          var sdpMid        = candidateObj.ContainsKey("sdpMid") ? candidateObj["sdpMid"]?.ToString() : "0";
-          var sdpMLineIndex = candidateObj.ContainsKey("sdpMLineIndex") ?
-              int.Parse(candidateObj["sdpMLineIndex"].ToString()) : 0;
-
-          var init = new RTCIceCandidateInit
-          {
-              candidate     = candidateStr,
-              sdpMid        = sdpMid ?? "0",
-              sdpMLineIndex = sdpMLineIndex
-          };
-          _peerConnection.AddIceCandidate(new RTCIceCandidate(init));
-      }
-      catch (Exception e)
-      {
-          Debug.LogError("PeerConnectionManager: ICE candidate error: " + e.Message);
-      }
+    if (!IceCandidateParser.TryParse(data, out var init)) return;
+    _peerConnection.AddIceCandidate(new RTCIceCandidate(init));
   }
-
-  // -------------------------------------------------------------------------
-  // Cleanup
-  // -------------------------------------------------------------------------
-
   void OnDestroy()
   {
       _peerConnection?.Close();

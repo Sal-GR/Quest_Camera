@@ -8,15 +8,11 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Networking;
 
-/// <summary>
-/// Handles all signaling communication:
-/// - HTTP fetches for ICE config and WebPubSub token
-/// - WebSocket connection and message routing
-/// Raises events for WebRTCSender to react to.
-/// </summary>
 public class SignalingClient : MonoBehaviour
 {
-  private string signalingServerUrl = "https://ar-signaling-server.azurewebsites.net";
+    [Header("Dependancies")]
+    [SerializeField] private SignalingHttpClient httpClient;
+  //private string signalingServerUrl = "https://ar-signaling-server.azurewebsites.net";
 
   // Fired after ICE config and negotiate requests succeed
   public event Action<IceConfigResponse> OnIceConfigReady;
@@ -38,45 +34,58 @@ public class SignalingClient : MonoBehaviour
   {
       _room       = room;
       _callerName = callerName;
-      StartCoroutine(FetchConfigAndConnect(userId));
+      //StartCoroutine(FetchConfigAndConnect(userId));
+
+      // Subscribe to HTTP client events
+        httpClient.OnIceConfigReady    += config => OnIceConfigReady?.Invoke(config);
+        httpClient.OnNegotiateComplete += OnNegotiateComplete;
+
+        httpClient.FetchAndNegotiate(userId, room);
   }
+
+    private void OnNegotiateComplete(string url)
+    {
+        httpClient.OnNegotiateComplete -= OnNegotiateComplete;
+        _cts = new CancellationTokenSource();
+        _ = ConnectWebSocket(url);
+    }
 
   // -------------------------------------------------------------------------
   // HTTP
   // -------------------------------------------------------------------------
 
-  private IEnumerator FetchConfigAndConnect(string userId)
-  {
-      // 1. ICE config
-      using var iceReq = UnityWebRequest.Get($"{signalingServerUrl}/ice-config");
-      yield return iceReq.SendWebRequest();
+//   private IEnumerator FetchConfigAndConnect(string userId)
+//   {
+//       // 1. ICE config
+//       using var iceReq = UnityWebRequest.Get($"{signalingServerUrl}/ice-config");
+//       yield return iceReq.SendWebRequest();
 
-      if (iceReq.result != UnityWebRequest.Result.Success)
-      {
-          Debug.LogError("SignalingClient: ICE config fetch failed: " + iceReq.error);
-          yield break;
-      }
+//       if (iceReq.result != UnityWebRequest.Result.Success)
+//       {
+//           Debug.LogError("SignalingClient: ICE config fetch failed: " + iceReq.error);
+//           yield break;
+//       }
 
-      var iceConfig = JsonUtility.FromJson<IceConfigResponse>(iceReq.downloadHandler.text);
-      OnIceConfigReady?.Invoke(iceConfig);
+//       var iceConfig = JsonUtility.FromJson<IceConfigResponse>(iceReq.downloadHandler.text);
+//       OnIceConfigReady?.Invoke(iceConfig);
 
-      // 2. Negotiate WebPubSub token
-      using var negReq = UnityWebRequest.Get(
-          $"{signalingServerUrl}/negotiate?userId={userId}&room={_room}");
-      yield return negReq.SendWebRequest();
+//       // 2. Negotiate WebPubSub token
+//       using var negReq = UnityWebRequest.Get(
+//           $"{signalingServerUrl}/negotiate?userId={userId}&room={_room}");
+//       yield return negReq.SendWebRequest();
 
-      if (negReq.result != UnityWebRequest.Result.Success)
-      {
-          Debug.LogError("SignalingClient: Negotiate failed: " + negReq.error);
-          yield break;
-      }
+//       if (negReq.result != UnityWebRequest.Result.Success)
+//       {
+//           Debug.LogError("SignalingClient: Negotiate failed: " + negReq.error);
+//           yield break;
+//       }
 
-      var negotiateResponse = JsonUtility.FromJson<NegotiateResponse>(negReq.downloadHandler.text);
+//       var negotiateResponse = JsonUtility.FromJson<NegotiateResponse>(negReq.downloadHandler.text);
 
-      // 3. Open WebSocket
-      _cts = new CancellationTokenSource();
-      _ = ConnectWebSocket(negotiateResponse.url);
-  }
+//       // 3. Open WebSocket
+//       _cts = new CancellationTokenSource();
+//       _ = ConnectWebSocket(negotiateResponse.url);
+//   }
 
   // -------------------------------------------------------------------------
   // WebSocket

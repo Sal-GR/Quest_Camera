@@ -5,19 +5,10 @@ using UnityEngine.Experimental.Rendering;
 using Meta.XR;
 using Unity.WebRTC;
 
-/// <summary>
-/// Owns all passthrough camera access, RenderTexture composition, and stereo shader blit.
-/// Raises OnTrackReady once the VideoStreamTrack is live and compositing has begun.
-/// </summary>
 public class VideoCompositor : MonoBehaviour
 {
-  [Header("Passthrough Cameras")]
-  [SerializeField] private PassthroughCameraAccess passthroughLeft;
-  [SerializeField] private PassthroughCameraAccess passthroughRight;
-
-  [Header("Compositor Cameras")]
-  [SerializeField] private Camera LeftCaptureCamera;
-  [SerializeField] private Camera RightCaptureCamera;
+    [Header ("Dependencies")]
+    [SerializeField] private PassthroughManager passthroughManager;
 
   [Header("Render Textures")]
   [SerializeField] private RenderTexture LeftCameraRT;
@@ -29,73 +20,64 @@ public class VideoCompositor : MonoBehaviour
   private RenderTexture _webRtcRenderTexture;
   private Material _stereoBlendMaterial;
   private VideoStreamTrack _videoTrack;
-  private bool _isReady = false;
+  public bool IsReady { get; private set; } = false;
 
-  public bool IsReady => _isReady;
+//   public bool IsReady => _isReady;
   public VideoStreamTrack Track => _videoTrack;
 
   // Called by WebRTCSender after the peer connection is set up.
   public void StartCompositor()
   {
-      StartCoroutine(SetupVideoTrack());
+    if (passthroughManager.IsReady)
+    {
+        StartCoroutine(SetupRenderPipeline());
+    }
+    else
+    {
+        passthroughManager.OnPassthroughReady += OnPassthroughReady;
+        passthroughManager.StartPassthrough();
+    }
   }
+      private void OnPassthroughReady()
+    {
+        passthroughManager.OnPassthroughReady -= OnPassthroughReady;
+        StartCoroutine(SetupRenderPipeline());
+    }
 
-  private IEnumerator SetupVideoTrack()
-  {
-      // Wait until both passthrough cameras are streaming
-      float timeout = 10f;
-      float elapsed = 0f;
-      while ((!passthroughLeft.IsPlaying || !passthroughRight.IsPlaying) && elapsed < timeout)
-      {
-          yield return new WaitForSeconds(0.2f);
-          elapsed += 0.2f;
-      }
+    private IEnumerator SetupRenderPipeline()
+    {
+        var sourceRt = passthroughManager.GetLeftRenderTexture();
+        if (sourceRt == null)
+        {
+            Debug.LogError("VideoCompositor: Could not get RenderTexture from PassthroughManager!");
+            yield break;
+        }
 
-      if (!passthroughLeft.IsPlaying || !passthroughRight.IsPlaying)
-      {
-          Debug.LogError("VideoCompositor: PassthroughCameraAccess never started playing!");
-          yield break;
-      }
+        // Create the output RenderTexture that WebRTC will encode
+        _webRtcRenderTexture = new RenderTexture(sourceRt.width, sourceRt.height, 0)
+        {
+            useMipMap = false,
+            autoGenerateMips = false,
+            graphicsFormat = GraphicsFormat.B8G8R8A8_SRGB
+        };
+        _webRtcRenderTexture.Create();
 
-      // Let two frames settle so GetTexture() returns a valid RenderTexture
-      yield return new WaitForEndOfFrame();
-      yield return new WaitForEndOfFrame();
+        var shader = Shader.Find("Custom/StereoBlend");
+        if (shader == null)
+        {
+            Debug.LogError("VideoCompositor: Could not find shader Custom/StereoBlend!");
+            yield break;
+        }
+        _stereoBlendMaterial = new Material(shader);
 
-      var sourceRt = passthroughLeft.GetTexture() as RenderTexture;
-      if (sourceRt == null)
-      {
-          Debug.LogError("VideoCompositor: Could not get RenderTexture from PassthroughCameraAccess!");
-          yield break;
-      }
+        _videoTrack = new VideoStreamTrack(_webRtcRenderTexture);
+        IsReady = true;
 
-      // Create the output RenderTexture that WebRTC will encode
-      _webRtcRenderTexture = new RenderTexture(sourceRt.width, sourceRt.height, 0)
-      {
-          useMipMap = false,
-          autoGenerateMips = false,
-          graphicsFormat = GraphicsFormat.B8G8R8A8_SRGB
-      };
-      _webRtcRenderTexture.Create();
+        OnTrackReady?.Invoke(_videoTrack);
+        Debug.Log("VideoCompositor: Track ready, starting compositor loop");
 
-      AlignCaptureCamerasToLens();
-
-      // Load the stereo blend shader
-      var shader = Shader.Find("Custom/StereoBlend");
-      if (shader == null)
-      {
-          Debug.LogError("VideoCompositor: Could not find shader Custom/StereoBlend!");
-          yield break;
-      }
-      _stereoBlendMaterial = new Material(shader);
-
-      // Create the track and notify listeners (e.g. PeerConnectionManager)
-      _videoTrack = new VideoStreamTrack(_webRtcRenderTexture);
-      _isReady = true;
-
-      OnTrackReady?.Invoke(_videoTrack);
-
-      StartCoroutine(CompositorLoop());
-  }
+        StartCoroutine(CompositorLoop());
+    }
 
   private IEnumerator CompositorLoop()
   {
@@ -103,11 +85,11 @@ public class VideoCompositor : MonoBehaviour
       {
           yield return new WaitForEndOfFrame();
 
-          if (!_isReady || _webRtcRenderTexture == null) continue;
-          if (!passthroughLeft.IsPlaying || !passthroughRight.IsPlaying) continue;
+          if (!IsReady || _webRtcRenderTexture == null) continue;
+          if (!passthroughManager.IsPlaying) continue;
 
-          var leftSrc  = passthroughLeft.GetTexture();
-          var rightSrc = passthroughRight.GetTexture();
+          var leftSrc  = passthroughManager.GetLeftTexture();
+          var rightSrc = passthroughManager.GetRightTexture();
           if (leftSrc == null || rightSrc == null) continue;
 
           _stereoBlendMaterial.SetTexture("_LeftTex",     leftSrc);
@@ -119,26 +101,9 @@ public class VideoCompositor : MonoBehaviour
       }
   }
 
-  private void AlignCaptureCamerasToLens()
-  {
-      var leftLens  = passthroughLeft.Intrinsics.LensOffset;
-      var rightLens = passthroughRight.Intrinsics.LensOffset;
-
-      LeftCaptureCamera.transform.localPosition  = leftLens.position;
-      LeftCaptureCamera.transform.localRotation  = leftLens.rotation;
-      RightCaptureCamera.transform.localPosition = rightLens.position;
-      RightCaptureCamera.transform.localRotation = rightLens.rotation;
-
-      float fovLeft  = 2f * Mathf.Atan(passthroughLeft.CurrentResolution.y  / (2f * passthroughLeft.Intrinsics.FocalLength.y))  * Mathf.Rad2Deg;
-      float fovRight = 2f * Mathf.Atan(passthroughRight.CurrentResolution.y / (2f * passthroughRight.Intrinsics.FocalLength.y)) * Mathf.Rad2Deg;
-
-      LeftCaptureCamera.fieldOfView  = fovLeft;
-      RightCaptureCamera.fieldOfView = fovRight;
-  }
-
   private void OnDestroy()
   {
-      _isReady = false;
+      IsReady = false;
       _videoTrack?.Dispose();
       if (_webRtcRenderTexture != null) Destroy(_webRtcRenderTexture);
       if (LeftCameraRT  != null) Destroy(LeftCameraRT);
