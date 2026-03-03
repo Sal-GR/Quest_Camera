@@ -3,9 +3,9 @@ Shader "Custom/StereoBlend"
     Properties
     {
         _LeftTex ("Left Passthrough", 2D) = "black" {}
-        _RightTex ("Right Passthrough", 2D) = "black" {}
+        //_RightTex ("Right Passthrough", 2D) = "black" {}
         _LeftAssets ("Left Assets", 2D) = "clear" {}
-        _RightAssets ("Right Assets", 2D) = "clear" {}
+        //_RightAssets ("Right Assets", 2D) = "clear" {}
         _AssetOffsetX ("Asset Horizontal Offset", Float) = -0.05
         _AssetOffsetY ("Asset Vertical Offset", Float) = 0.0
     }
@@ -21,9 +21,9 @@ Shader "Custom/StereoBlend"
             #include "UnityCG.cginc"
 
             sampler2D _LeftTex;
-            sampler2D _RightTex;
+            //sampler2D _RightTex;
             sampler2D _LeftAssets;
-            sampler2D _RightAssets;
+            //sampler2D _RightAssets;
             float _AssetOffsetX;
             float _AssetOffsetY;
 
@@ -53,13 +53,12 @@ Shader "Custom/StereoBlend"
                 // Passthrough from left eye only — no doubling
                 fixed4 passthrough = tex2D(_LeftTex, i.uv);
 
-                // Average Unity assets from both eyes (reduces aliasing on edges)
                 fixed4 leftAsset  = tex2D(_LeftAssets,  assetUV);
-                fixed4 rightAsset = tex2D(_RightAssets, assetUV);
-                fixed4 assets = (leftAsset + rightAsset) * 0.5;
+                //fixed4 rightAsset = tex2D(_RightAssets, assetUV);
+                //fixed4 assets = (leftAsset + rightAsset) * 0.5;
 
                 // Overlay averaged assets on top of single-eye passthrough
-                return lerp(passthrough, assets, assets.a);
+                return lerp(passthrough, leftAsset, leftAsset.a);
             }
             ENDCG
         }
