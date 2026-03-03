@@ -150,6 +150,100 @@ Transform:
   m_Children: []
   m_Father: {fileID: 715067899}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &239179148
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 239179150}
+  - component: {fileID: 239179149}
+  m_Layer: 0
+  m_Name: VideoCompositor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &239179149
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 239179148}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9de3c66753bc8c5409b7ff2bb53ee7c0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::VideoCompositor
+  passthroughLeft: {fileID: 1964602098}
+  passthroughRight: {fileID: 1964602099}
+  LeftCaptureCamera: {fileID: 1452034440}
+  RightCaptureCamera: {fileID: 1601621252}
+  LeftCameraRT: {fileID: 8400000, guid: c9d325f6a3d36874aad4cf0d2b47dab2, type: 2}
+  RightCameraRT: {fileID: 8400000, guid: 68dde741ad5dd8247843bf89a10b7e64, type: 2}
+--- !u!4 &239179150
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 239179148}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.48181, y: -0, z: 2.07454}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &405372165
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 405372167}
+  - component: {fileID: 405372166}
+  m_Layer: 0
+  m_Name: SignalingObj
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &405372166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 405372165}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90c7dc1bca1b251419db1014fcd4c9ba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SignalingClient
+--- !u!4 &405372167
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 405372165}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.48181, y: -0, z: 2.07454}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &555800697
 GameObject:
   m_ObjectHideFlags: 0
@@ -601,12 +695,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f2c657273fe8cc4458fe6b9625d8c858, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WebRTCSender
-  passthroughLeft: {fileID: 1964602098}
-  passthroughRight: {fileID: 1964602099}
-  LeftCaptureCamera: {fileID: 1452034440}
-  RightCaptureCamera: {fileID: 1601621252}
-  LeftCameraRT: {fileID: 8400000, guid: c9d325f6a3d36874aad4cf0d2b47dab2, type: 2}
-  RightCameraRT: {fileID: 8400000, guid: 68dde741ad5dd8247843bf89a10b7e64, type: 2}
+  videoCompositor: {fileID: 239179149}
+  signalingClient: {fileID: 405372166}
+  peerConnectionManager: {fileID: 1231414921}
 --- !u!4 &981178649
 Transform:
   m_ObjectHideFlags: 0
@@ -715,6 +806,50 @@ Transform:
   - {fileID: 1667656137}
   - {fileID: 711438140}
   m_Father: {fileID: 555800698}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1231414920
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1231414922}
+  - component: {fileID: 1231414921}
+  m_Layer: 0
+  m_Name: PeerConnectionObj
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1231414921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1231414920}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 560eecb4eff676347afbabe5abe551da, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PeerConnectionManager
+--- !u!4 &1231414922
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1231414920}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.48181, y: -0, z: 2.07454}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1280835813
 GameObject:
@@ -1787,3 +1922,6 @@ SceneRoots:
   - {fileID: 981178649}
   - {fileID: 2033460333}
   - {fileID: 1964602097}
+  - {fileID: 239179150}
+  - {fileID: 405372167}
+  - {fileID: 1231414922}
