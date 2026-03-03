@@ -2,31 +2,25 @@ using System;
 using System.Collections;
 using Meta.XR;
 using UnityEngine;
-
-/// <summary>
-/// Owns PassthroughCameraAccess for both eyes.
-/// Waits until both cameras are streaming, aligns the capture cameras to the
-/// physical lens offsets, then fires OnPassthroughReady.
-/// </summary>
 public class PassthroughManager : MonoBehaviour
 {
   [Header("Passthrough Cameras")]
   [SerializeField] private PassthroughCameraAccess passthroughLeft;
-  [SerializeField] private PassthroughCameraAccess passthroughRight;
+  //[SerializeField] private PassthroughCameraAccess passthroughRight;
 
   [Header("Compositor Cameras")]
   [SerializeField] private Camera LeftCaptureCamera;
-  [SerializeField] private Camera RightCaptureCamera;
+  //[SerializeField] private Camera RightCaptureCamera;
 
   // Fired once both cameras are streaming and lens alignment is done
   public event Action OnPassthroughReady;
 
   public bool IsReady { get; private set; } = false;
 
-  public bool IsPlaying => passthroughLeft.IsPlaying && passthroughRight.IsPlaying;
+  public bool IsPlaying => passthroughLeft.IsPlaying;
 
   public Texture GetLeftTexture()  => passthroughLeft.GetTexture();
-  public Texture GetRightTexture() => passthroughRight.GetTexture();
+  //public Texture GetRightTexture() => passthroughRight.GetTexture();
 
   // Returns the left passthrough RenderTexture — used by VideoCompositor to
   // match the output RT dimensions.
@@ -41,15 +35,15 @@ public class PassthroughManager : MonoBehaviour
   {
       float timeout = 10f;
       float elapsed = 0f;
-      while ((!passthroughLeft.IsPlaying || !passthroughRight.IsPlaying) && elapsed < timeout)
+      while (!passthroughLeft.IsPlaying  && elapsed < timeout)
       {
           yield return new WaitForSeconds(0.2f);
           elapsed += 0.2f;
       }
 
-      if (!passthroughLeft.IsPlaying || !passthroughRight.IsPlaying)
+      if (!passthroughLeft.IsPlaying)
       {
-          Debug.LogError("PassthroughManager: Cameras never started playing!");
+          Debug.LogError("PassthroughManager: Left camera never started playing!");
           yield break;
       }
 
@@ -67,17 +61,15 @@ public class PassthroughManager : MonoBehaviour
   private void AlignCaptureCamerasToLens()
   {
       var leftLens  = passthroughLeft.Intrinsics.LensOffset;
-      var rightLens = passthroughRight.Intrinsics.LensOffset;
+      //var rightLens = passthroughRight.Intrinsics.LensOffset;
 
       LeftCaptureCamera.transform.localPosition  = leftLens.position;
       LeftCaptureCamera.transform.localRotation  = leftLens.rotation;
-      RightCaptureCamera.transform.localPosition = rightLens.position;
-      RightCaptureCamera.transform.localRotation = rightLens.rotation;
 
       float fovLeft  = 2f * Mathf.Atan(passthroughLeft.CurrentResolution.y  / (2f * passthroughLeft.Intrinsics.FocalLength.y))  * Mathf.Rad2Deg;
-      float fovRight = 2f * Mathf.Atan(passthroughRight.CurrentResolution.y / (2f * passthroughRight.Intrinsics.FocalLength.y)) * Mathf.Rad2Deg;
+      //float fovRight = 2f * Mathf.Atan(passthroughRight.CurrentResolution.y / (2f * passthroughRight.Intrinsics.FocalLength.y)) * Mathf.Rad2Deg;
 
       LeftCaptureCamera.fieldOfView  = fovLeft;
-      RightCaptureCamera.fieldOfView = fovRight;
+      //RightCaptureCamera.fieldOfView = fovRight;
   }
 }

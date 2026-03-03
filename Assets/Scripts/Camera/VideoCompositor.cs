@@ -12,7 +12,7 @@ public class VideoCompositor : MonoBehaviour
 
   [Header("Render Textures")]
   [SerializeField] private RenderTexture LeftCameraRT;
-  [SerializeField] private RenderTexture RightCameraRT;
+  //[SerializeField] private RenderTexture RightCameraRT;
 
   // Fired once the VideoStreamTrack is created and compositing has started.
   public event Action<VideoStreamTrack> OnTrackReady;
@@ -89,13 +89,13 @@ public class VideoCompositor : MonoBehaviour
           if (!passthroughManager.IsPlaying) continue;
 
           var leftSrc  = passthroughManager.GetLeftTexture();
-          var rightSrc = passthroughManager.GetRightTexture();
-          if (leftSrc == null || rightSrc == null) continue;
+          //var rightSrc = passthroughManager.GetRightTexture();
+          if (leftSrc == null) continue;
 
           _stereoBlendMaterial.SetTexture("_LeftTex",     leftSrc);
-          _stereoBlendMaterial.SetTexture("_RightTex",    rightSrc);
+          //_stereoBlendMaterial.SetTexture("_RightTex",    rightSrc);
           _stereoBlendMaterial.SetTexture("_LeftAssets",  LeftCameraRT);
-          _stereoBlendMaterial.SetTexture("_RightAssets", RightCameraRT);
+          //_stereoBlendMaterial.SetTexture("_RightAssets", RightCameraRT);
 
           Graphics.Blit(null, _webRtcRenderTexture, _stereoBlendMaterial);
       }
@@ -107,6 +107,6 @@ public class VideoCompositor : MonoBehaviour
       _videoTrack?.Dispose();
       if (_webRtcRenderTexture != null) Destroy(_webRtcRenderTexture);
       if (LeftCameraRT  != null) Destroy(LeftCameraRT);
-      if (RightCameraRT != null) Destroy(RightCameraRT);
+      //if (RightCameraRT != null) Destroy(RightCameraRT);
   }
 }
